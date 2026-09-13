@@ -36,7 +36,7 @@ export class HUD {
     });
     this.chatEl = el('div', { class: 'chat' }, this.chatLog, this.chatInput);
     this.fpsEl = el('div', { class: 'fps' });
-    this.lockHint = el('div', { class: 'lockhint', hidden: true, onClick: () => cb.onAction('lock') }, el('div', {}, 'Click to look around · Esc for settings'));
+    this.lockHint = el('div', { class: 'lockhint', hidden: true, onClick: () => cb.onAction('lock') }, el('div', {}, 'Click the 3D view to look around · Esc releases the mouse'));
     this.root = el('div', { id: 'hud', hidden: true }, this.blackout, this.vignette, el('div', { class: 'crosshair' }), this.tasksEl, this.promptEl, this.bannerEl, this.codesEl, this.centerEl, this.toasts, this.micEl, this.actionsEl, this.ventEl, this.sabMenu, this.chatEl, this.fpsEl, this.lockHint);
     root.appendChild(this.root);
     this._centerTimer = null;

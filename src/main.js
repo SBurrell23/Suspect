@@ -180,8 +180,7 @@ class App {
     this.sound.music.setIntensity(1);
     this.sound.music.start();
     net.sendToHost({ t: MSG.JOIN, name, colorIdx });
-    this.hud.toast(`Room <b>${code}</b> — share the code. ${net.isHost ? 'You are the host.' : ''}`, 6000);
-    this.localPlayer.requestPointerLock(this.canvas);
+    this.hud.toast(`Room <b>${code}</b> — share the code. ${net.isHost ? 'You are the host.' : ''} Click the 3D view to look around, Esc to get the mouse back.`, 8000);
   }
 
   onBecameHost() {
