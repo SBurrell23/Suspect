@@ -1,0 +1,151 @@
+// LEVEL 2 — ORBITAL RING (curved). A torus station: the main corridor is a real 360° ring
+// (built from ~160 curved segments) so nothing is ever visible at long range — people rise into
+// view around the bend. Rooms hang off the ring at angles and are auto-rotated to face it.
+// The Zero-G Spine at the hub disables gravity.
+//
+// NOTE: the floor is flat (gravity is straight down everywhere); the curvature is horizontal.
+// See README "Known deviations" — the spec's re-oriented-up-vector torus was shipped as the fallback.
+const H = Math.PI / 2;
+const RING_R = 30;
+
+export default {
+  id: 'orbitalRing',
+  name: 'Orbital Ring',
+  palette: { primary: 0xcfd6dd, accent: 0x3fa7ff, floor: 0x9aa4ad, wall: 0xd5dbe1, ceiling: 0xbfc7ce, emissive: 0x3fa7ff, surface: 'metal', floorTex: 'tiles', wallTex: 'wall' },
+  background: 0x02030a,
+  sky: 'stars',
+  spawn: { room: 'commons', local: [0, 3] },
+  spawnRadius: 2.5,
+  meetingTable: { room: 'commons', local: [0, -1] },
+  rooms: [
+    { id: 'hab', name: 'Habitation Ring', shape: 'ring', center: [0, 0, 0], radius: RING_R, width: 6, height: 3.6, reverb: 'small-room' },
+    { id: 'hydro', name: 'Hydroponics', attach: { ring: 'hab', angle: 0, gap: 4 }, size: [14, 4, 12], reverb: 'small-room', floorColor: 0x6f8a6a, wallColor: 0xc9d6c4 },
+    { id: 'comms', name: 'Comms Array', attach: { ring: 'hab', angle: 60, gap: 4 }, size: [10, 4, 10], reverb: 'small-room', wallColor: 0xb8c4d0 },
+    { id: 'medbay', name: 'Med Bay', attach: { ring: 'hab', angle: 120, gap: 4 }, size: [12, 4, 10], reverb: 'small-room', wallColor: 0xe6eef4, floorColor: 0xb9c6d1 },
+    { id: 'airlock', name: 'Airlock', attach: { ring: 'hab', angle: 180, gap: 4 }, size: [8, 3.5, 8], reverb: 'small-room', wallColor: 0x8d979f, floorColor: 0x6b747b },
+    { id: 'dome', name: 'Observation Dome', attach: { ring: 'hab', angle: 240, gap: 4 }, size: [16, 7, 16], open: true, reverb: 'large-metal', floorColor: 0x2a3340, wallColor: 0x3a4652 },
+    { id: 'commons', name: 'Commons', attach: { ring: 'hab', angle: 300, gap: 4 }, size: [14, 4, 12], reverb: 'small-room' },
+    { id: 'spine', name: 'Zero-G Spine', attach: { ring: 'hab', angle: 90, side: 'inner', gap: 22 }, size: [10, 14, 10], zeroG: true, reverb: 'large-metal', wallColor: 0x7c8894, floorColor: 0x55606a },
+  ],
+  corridors: [
+    { from: 'hab', to: 'hydro', width: 3, height: 3.2 },
+    { from: 'hab', to: 'comms', width: 3, height: 3.2 },
+    { from: 'hab', to: 'medbay', width: 3, height: 3.2 },
+    { from: 'hab', to: 'airlock', width: 3, height: 3.2 },
+    { from: 'hab', to: 'dome', width: 3.5, height: 3.4 },
+    { from: 'hab', to: 'commons', width: 3.5, height: 3.4 },
+    { from: 'hab', to: 'spine', width: 3, height: 3.2 },
+  ],
+  platforms: [],
+  stairs: [],
+  walls: [],
+  props: [
+    // hydroponics
+    { type: 'hydroTray', room: 'hydro', local: [-3.5, -1], rot: H },
+    { type: 'hydroTray', room: 'hydro', local: [0, -1], rot: H },
+    { type: 'hydroTray', room: 'hydro', local: [3.5, -1], rot: H },
+    { type: 'plant', room: 'hydro', local: [-6, 5] },
+    { type: 'plant', room: 'hydro', local: [6, 5] },
+    { type: 'tank', room: 'hydro', local: [-5.5, 4.5], scale: 0.7 },
+    // comms
+    { type: 'antenna', room: 'comms', local: [0, 1] },
+    { type: 'server', room: 'comms', local: [-4.4, 3] , rot: H },
+    { type: 'server', room: 'comms', local: [-4.4, 1.8], rot: H },
+    { type: 'server', room: 'comms', local: [4.4, 3], rot: -H },
+    // medbay
+    { type: 'cryoPod', room: 'medbay', local: [-3.5, 1.5] },
+    { type: 'cryoPod', room: 'medbay', local: [0, 1.5] },
+    { type: 'bed', room: 'medbay', local: [4, 2] },
+    { type: 'locker', room: 'medbay', local: [-5.4, -2], rot: H },
+    // airlock
+    { type: 'locker', room: 'airlock', local: [-3.4, 0], rot: H },
+    { type: 'locker', room: 'airlock', local: [3.4, 0], rot: -H },
+    { type: 'crate', room: 'airlock', local: [0, 2.5] },
+    // dome
+    { type: 'bench', room: 'dome', local: [-4, 4], rot: 0.6 },
+    { type: 'bench', room: 'dome', local: [4, 4], rot: -0.6 },
+    { type: 'plant', room: 'dome', local: [-6.5, -6.5] },
+    { type: 'plant', room: 'dome', local: [6.5, -6.5] },
+    { type: 'antenna', room: 'dome', local: [0, 5.5], scale: 0.6 },
+    // commons
+    { type: 'bench', room: 'commons', local: [-5, -4], rot: H },
+    { type: 'bench', room: 'commons', local: [5, -4], rot: H },
+    { type: 'locker', room: 'commons', local: [-6.4, 3], rot: H },
+    { type: 'crateStack', room: 'commons', local: [5.5, 4.5], rot: 0.3 },
+    { type: 'plant', room: 'commons', local: [-6, 5.2] },
+    // spine
+    { type: 'server', room: 'spine', local: [-4.4, 2], rot: H },
+    { type: 'server', room: 'spine', local: [4.4, 2], rot: -H },
+    { type: 'pipeCluster', room: 'spine', local: [0, 4.4], rot: Math.PI },
+    // ring props
+    { type: 'crate', room: 'hab', polar: [30, 32.2] },
+    { type: 'barrel', room: 'hab', polar: [33, 32.3] },
+    { type: 'locker', room: 'hab', polar: [150, 32.4] },
+    { type: 'plant', room: 'hab', polar: [210, 27.8] },
+    { type: 'crateStack', room: 'hab', polar: [270, 32.2] },
+    { type: 'bench', room: 'hab', polar: [345, 27.9] },
+    { type: 'bench', room: 'hab', polar: [100, 27.9] },
+    { type: 'server', room: 'hab', polar: [200, 32.4] },
+    { type: 'pipeCluster', room: 'hab', polar: [255, 32.4] },
+    { type: 'plant', room: 'hab', polar: [15, 27.8] },
+  ],
+  vents: [
+    { id: 'v1', room: 'hydro', local: [5, 3], connects: ['v2', 'v5'] },
+    { id: 'v2', room: 'medbay', local: [4.5, -2], connects: ['v1', 'v3'] },
+    { id: 'v3', room: 'dome', local: [-6, 2], connects: ['v2', 'v4'] },
+    { id: 'v4', room: 'commons', local: [-4, 3], connects: ['v3', 'v5'] },
+    { id: 'v5', room: 'hab', polar: [150, 28.6], connects: ['v1', 'v4', 'vSpine'] },
+    // The spine is a semi-public vent: everyone can use it, but you are exposed inside.
+    { id: 'vSpine', room: 'spine', local: [0, -2], connects: ['v5', 'v3'], public: true },
+  ],
+  taskStations: [
+    { id: 'ts_hydro_seed', room: 'hydro', local: [-3, 5.4], rot: Math.PI, minigame: 'seedCatalogue', label: 'Seed Log' },
+    { id: 'ts_hydro_nutr', room: 'hydro', local: [6.4, 0], rot: -H, minigame: 'coolantPurge', label: 'Nutrient' },
+    { id: 'ts_comms_upload', room: 'comms', local: [0, 4.4], rot: Math.PI, minigame: 'dataUpload', label: 'Upload', downloadAt: 'ts_med_download' },
+    { id: 'ts_comms_spec', room: 'comms', local: [4.4, -1], rot: -H, minigame: 'spectrometer', label: 'Antenna' },
+    { id: 'ts_med_download', room: 'medbay', local: [5.4, 1], rot: -H, minigame: 'dataUpload', label: 'Download', downloadOnly: true },
+    { id: 'ts_med_scan', room: 'medbay', local: [-2, 4.4], rot: Math.PI, minigame: 'identScan', label: 'Med Scan', visual: true },
+    { id: 'ts_med_dose', room: 'medbay', local: [2.5, 4.4], rot: Math.PI, minigame: 'reactorCalibrate', label: 'Dosage' },
+    { id: 'ts_air_press', room: 'airlock', local: [0, 3.4], rot: Math.PI, minigame: 'airlockPressurize', label: 'Airlock' },
+    { id: 'ts_dome_debris', room: 'dome', local: [-7.4, -2], rot: H, minigame: 'debrisClear', label: 'Debris' },
+    { id: 'ts_dome_wire', room: 'dome', local: [7.4, -2], rot: -H, minigame: 'wireSplice', label: 'Wiring' },
+    { id: 'ts_com_cargo', room: 'commons', local: [6.4, -2], rot: -H, minigame: 'cargoSort', label: 'Cargo' },
+    { id: 'ts_com_wire', room: 'commons', local: [-6.4, -2], rot: H, minigame: 'wireSplice', label: 'Wiring' },
+    { id: 'ts_ring_wire', room: 'hab', polar: [30, 32.4], y: 0, rot: 0, minigame: 'wireSplice', label: 'Junction' },
+    { id: 'ts_ring_cal', room: 'hab', polar: [200, 27.6], rot: 0, minigame: 'reactorCalibrate', label: 'Gyro' },
+    { id: 'ts_spine_purge', room: 'spine', local: [-4.4, -2], rot: H, minigame: 'coolantPurge', label: 'Thrusters' },
+  ],
+  sabotageStations: [
+    { id: 'fix_lights', type: 'lights', room: 'hab', polar: [345, 32.4], rot: 0, label: 'Electrical' },
+    { id: 'fix_comms', type: 'comms', room: 'comms', local: [-4.4, -1], rot: H, label: 'Comms' },
+    { id: 'fix_react_a', type: 'reactor', index: 0, room: 'spine', local: [4.4, -2], rot: -H, label: 'Core A' },
+    { id: 'fix_react_b', type: 'reactor', index: 1, room: 'hab', polar: [100, 32.4], rot: 0, label: 'Core B' },
+    { id: 'fix_o2_a', type: 'o2', index: 0, room: 'hydro', local: [-6.4, 0], rot: H, label: 'O2 Filter' },
+    { id: 'fix_o2_b', type: 'o2', index: 1, room: 'airlock', local: [-3.4, 2.5], rot: H, label: 'O2 Filter' },
+  ],
+  doors: [
+    { id: 'd_hydro', room: 'hydro', local: [0, -6.6], rot: 0, width: 3, height: 3.2 },
+    { id: 'd_medbay', room: 'medbay', local: [0, -5.6], rot: 0, width: 3, height: 3.2 },
+    { id: 'd_commons', room: 'commons', local: [0, -6.6], rot: 0, width: 3.5, height: 3.4 },
+    { id: 'd_dome', room: 'dome', local: [0, -8.6], rot: 0, width: 3.5, height: 3.4 },
+    { id: 'd_spine', room: 'spine', local: [0, -5.6], rot: 0, width: 3, height: 3.2 },
+  ],
+  lights: [
+    { type: 'ambient', color: 0x334455, intensity: 0.3 },
+    { type: 'hemi', color: 0x8899bb, ground: 0x222233, intensity: 0.35 },
+    { type: 'directional', color: 0xfff4e0, intensity: 1.4, pos: [45, 14, 0], target: [0, 0, 0], sunSweep: 40 },
+    { type: 'point', room: 'hab', polar: [0, 30], y: 3.3, color: 0xdfe8ff, intensity: 35, range: 20 },
+    { type: 'point', room: 'hab', polar: [60, 30], y: 3.3, color: 0xdfe8ff, intensity: 35, range: 20 },
+    { type: 'point', room: 'hab', polar: [120, 30], y: 3.3, color: 0xdfe8ff, intensity: 35, range: 20 },
+    { type: 'point', room: 'hab', polar: [180, 30], y: 3.3, color: 0xdfe8ff, intensity: 35, range: 20 },
+    { type: 'point', room: 'hab', polar: [240, 30], y: 3.3, color: 0xdfe8ff, intensity: 35, range: 20 },
+    { type: 'point', room: 'hab', polar: [300, 30], y: 3.3, color: 0xdfe8ff, intensity: 35, range: 20 },
+    { type: 'point', room: 'hydro', local: [0, 0], y: 3.7, color: 0xe8ffe0, intensity: 45, range: 18 },
+    { type: 'point', room: 'medbay', local: [0, 0], y: 3.7, color: 0xffffff, intensity: 45, range: 16 },
+    { type: 'point', room: 'commons', local: [0, 0], y: 3.7, color: 0xfff0dd, intensity: 50, range: 18, castShadow: true },
+    { type: 'point', room: 'dome', local: [0, 0], y: 5, color: 0x9fbfff, intensity: 60, range: 24 },
+    { type: 'point', room: 'spine', local: [0, 0], y: 7, color: 0x3fa7ff, intensity: 50, range: 20 },
+  ],
+  special: [{ type: 'dome', room: 'dome', local: [0, 0], radius: 8.2 }],
+  ambience: { reverb: 'small-room', bedTrack: 'ambient-space' },
+};
