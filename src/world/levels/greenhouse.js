@@ -162,6 +162,6 @@ export default {
     { type: 'point', pos: [24, 4.5, 7], color: 0xcfe8ff, intensity: 30, range: 18 },
     { type: 'point', pos: [36, 4.5, -7], color: 0xcfe8ff, intensity: 30, range: 18 },
   ],
-  special: [{ type: 'dome', pos: [0, 0, 0], radius: 15.2 }],
+  special: [{ type: 'dome', pos: [0, 0, 0], radius: 25, ribRadius: 15.2, ribY: 12 }],
   ambience: { reverb: 'outdoor', bedTrack: 'organic' },
 };

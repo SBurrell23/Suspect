@@ -36,12 +36,12 @@ export default {
     { pos: [9, 5, 0], size: [3, 0.3, 15], grating: true, rails: ['w'] },
     { pos: [-12, 5, 9], size: [3, 0.3, 3], grating: true, rails: ['n', 'w'] },
     { pos: [12, 5, -9], size: [3, 0.3, 3], grating: true, rails: ['s', 'e'] },
-    { pos: [0, 9.5, -8.5], size: [10, 0.3, 3], grating: true, rails: ['s'] },
+    { pos: [0, 9.47, -8.5], size: [10, 0.3, 3], grating: true, rails: ['s'] },
   ],
   stairs: [
     { from: [-12, 0, 17.5], to: [-12, 5, 10.5], width: 2.5 },
     { from: [12, 0, -17.5], to: [12, 5, -10.5], width: 2.5 },
-    { from: [10, 5, -9], to: [3.5, 9.5, -9], width: 2.4 },
+    { from: [10, 5, -9], to: [5, 9.47, -9], width: 2.4 },
   ],
   walls: [],
   props: [

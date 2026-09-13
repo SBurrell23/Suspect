@@ -98,7 +98,7 @@ export class LobbyPanel {
       this._syncSettings(state.settings);
       const n = players.length;
       this.startBtn.disabled = n < state.minPlayers;
-      this.warn.textContent = n < state.minPlayers ? `Need ${state.minPlayers - n} more player${state.minPlayers - n === 1 ? '' : 's'} to start.` : n < 4 ? 'Dev mode: fewer than 4 players.' : '';
+      this.warn.textContent = n < state.minPlayers ? `Need ${state.minPlayers - n} more player${state.minPlayers - n === 1 ? '' : 's'} to start.` : n < 3 ? 'Dev mode: fewer than 3 players.' : n === 3 ? 'With 3 players the impostor wins on the first kill. Vote well.' : '';
     } else {
       this.warn.textContent = 'Waiting for the host to start…';
     }

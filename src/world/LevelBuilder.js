@@ -260,7 +260,7 @@ export class LevelBuilder {
         const R = outer ? ring.ro : ring.ri;
         ring.ringOpenings.push({ angle: phi, halfAngle: (width / 2 + WALL_T) / R, side: outer ? 'outer' : 'inner', height });
         this._addOpening(room, 'n', -width / 2, width / 2, height);
-        this._corridors.push({ id: `corr:${c.from}-${c.to}`, frame: { cx: room.cx, cz: room.cz, ry: room.ry }, axis: 'z', at: 0, from: -room.d / 2 - gap - WALL_T, to: -room.d / 2, width, height, floorY: room.floorY, room, doorAt: c.door });
+        this._corridors.push({ id: `corr:${c.from}-${c.to}`, frame: { cx: room.cx, cz: room.cz, ry: room.ry }, axis: 'z', at: 0, from: -room.d / 2 - gap, to: -room.d / 2, width, height, floorY: room.floorY, room, doorAt: c.door });
         continue;
       }
       if (Math.abs(A.ry - B.ry) > 1e-4) { console.warn('corridor rooms must share rotation', c); continue; }
@@ -303,8 +303,9 @@ export class LevelBuilder {
   _buildCorridor(c) {
     const zone = this._zone(c.id, 'corridor', { name: 'Corridor', surface: this.data.palette.surface || 'metal', reverb: 'small-room' });
     const m = this._mats({});
-    const len = c.to - c.from;
-    if (len < 0.2) return; // adjacent rooms: just openings
+    // pieces span from one room's wall outer face to the other's, so nothing is coplanar with room slabs
+    const len = c.to - c.from - WALL_T;
+    if (len < 0.05) return; // adjacent rooms: just openings
     const mid = (c.from + c.to) / 2;
     const y0 = c.floorY;
     const f = c.frame;
@@ -314,14 +315,14 @@ export class LevelBuilder {
       else this._localBox(zone, opts.mat, f, mid + z, y, c.at + x, d, h, w, opts);
     };
     // floor & ceiling
-    place(0, y0 - SLAB_T / 2, 0, c.width + WALL_T * 2, SLAB_T, len + 0.2, { mat: m.floor, surface: zone.surface, tag: 'floor' });
-    place(0, y0 + c.height + SLAB_T / 2, 0, c.width + WALL_T * 2, SLAB_T, len + 0.2, { mat: m.ceil });
+    place(0, y0 - SLAB_T / 2, 0, c.width + WALL_T * 2, SLAB_T, len, { mat: m.floor, surface: zone.surface, tag: 'floor' });
+    place(0, y0 + c.height + SLAB_T / 2, 0, c.width + WALL_T * 2, SLAB_T, len, { mat: m.ceil });
     // walls
-    place(-(c.width / 2 + WALL_T / 2), y0 + c.height / 2, 0, WALL_T, c.height, len + 0.2, { mat: m.wall });
-    place(c.width / 2 + WALL_T / 2, y0 + c.height / 2, 0, WALL_T, c.height, len + 0.2, { mat: m.wall });
-    // trim strip along floor
-    place(-(c.width / 2 - 0.05), y0 + 0.05, 0, 0.1, 0.1, len, { mat: m.trim, collide: false });
-    place(c.width / 2 - 0.05, y0 + 0.05, 0, 0.1, 0.1, len, { mat: m.trim, collide: false });
+    place(-(c.width / 2 + WALL_T / 2), y0 + c.height / 2, 0, WALL_T, c.height, len, { mat: m.wall });
+    place(c.width / 2 + WALL_T / 2, y0 + c.height / 2, 0, WALL_T, c.height, len, { mat: m.wall });
+    // trim strips protrude 1cm from the walls so they never share a plane with them
+    place(-(c.width / 2 - 0.04), y0 + 0.05, 0, 0.1, 0.1, len - 0.02, { mat: m.trim, collide: false });
+    place(c.width / 2 - 0.04, y0 + 0.05, 0, 0.1, 0.1, len - 0.02, { mat: m.trim, collide: false });
   }
 
   _buildBoxRoom(room) {
@@ -351,18 +352,21 @@ export class LevelBuilder {
       let cursor = side.lo - WALL_T / 2;
       const emit = (a, b, y0, y1, mat, opts = {}) => {
         if (b - a < 0.02 || y1 - y0 < 0.02) return;
-        const mid = (a + b) / 2, len = b - a;
-        if (side.alongX) this._localBox(zone, mat, f, mid, (y0 + y1) / 2, side.fixed, len, y1 - y0, WALL_T, { ...glassOpts, ...opts });
-        else this._localBox(zone, mat, f, side.fixed, (y0 + y1) / 2, mid, WALL_T, y1 - y0, len, { ...glassOpts, ...opts });
+        const mid = (a + b) / 2, len = b - a, thick = opts.thick || WALL_T;
+        if (side.alongX) this._localBox(zone, mat, f, mid, (y0 + y1) / 2, side.fixed, len, y1 - y0, thick, { ...glassOpts, ...opts });
+        else this._localBox(zone, mat, f, side.fixed, (y0 + y1) / 2, mid, thick, y1 - y0, len, { ...glassOpts, ...opts });
+      };
+      const solid = (a, b) => {
+        emit(a, b, floorY, floorY + h, m.wall);
+        // baseboard trim (render only), thicker than the wall so it never shares a plane with it
+        if (!room.glass) emit(Math.max(a, side.lo), Math.min(b, side.hi), floorY, floorY + 0.12, m.trim, { collide: false, thick: WALL_T + 0.06 });
       };
       for (const op of ops) {
-        emit(cursor, op.a, floorY, floorY + h, m.wall);
+        solid(cursor, op.a);
         emit(op.a, op.b, floorY + op.h, floorY + h, m.wall); // lintel
         cursor = op.b;
       }
-      emit(cursor, side.hi + WALL_T / 2, floorY, floorY + h, m.wall);
-      // baseboard trim (render only)
-      if (!room.glass) emit(side.lo, side.hi, floorY, floorY + 0.12, m.trim, { collide: false });
+      solid(cursor, side.hi + WALL_T / 2);
     }
   }
 
@@ -378,8 +382,19 @@ export class LevelBuilder {
     const floorQB = new QuadBuilder(), ceilQB = new QuadBuilder(), wallQB = new QuadBuilder(), trimQB = new QuadBuilder();
     const P = (r, phi, y) => [cx + Math.cos(phi) * r, y, cz + Math.sin(phi) * r];
     const inOpening = (phi, side) => room.ringOpenings.find((o) => o.side === side && Math.abs(Math.atan2(Math.sin(phi - o.angle), Math.cos(phi - o.angle))) < o.halfAngle);
-    for (let i = 0; i < n; i++) {
-      const p0 = a0 + ((a1 - a0) * i) / n, p1 = a0 + ((a1 - a0) * (i + 1)) / n, pm = (p0 + p1) / 2;
+    // segment boundaries: uniform chunks plus every opening edge, so corridor walls meet the ring wall exactly
+    const span = a1 - a0;
+    const angles = [];
+    for (let i = 0; i <= n; i++) angles.push(a0 + (span * i) / n);
+    for (const o of room.ringOpenings) for (const e of [o.angle - o.halfAngle, o.angle + o.halfAngle]) {
+      const rel = (((e - a0) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      if (rel <= span) angles.push(a0 + rel);
+    }
+    angles.sort((x, y) => x - y);
+    const segs = [];
+    for (let i = 0; i < angles.length - 1; i++) if (angles[i + 1] - angles[i] > 1e-4) segs.push([angles[i], angles[i + 1]]);
+    for (const [p0, p1] of segs) {
+      const pm = (p0 + p1) / 2;
       const rIn = ri - WALL_T / 2, rOut = ro + WALL_T / 2;
       // floor quad
       const uvF = (v) => [v[0] / TILE, v[2] / TILE];
@@ -605,8 +620,8 @@ export class LevelBuilder {
       grp.rotation.y = d.rot || 0;
       const left = new THREE.Mesh(new THREE.BoxGeometry(width / 2, height, 0.2), mat);
       const right = new THREE.Mesh(new THREE.BoxGeometry(width / 2, height, 0.2), mat);
-      left.position.set(-width / 4 - width / 2, height / 2, 0); // start open (slid into wall)
-      right.position.set(width / 4 + width / 2, height / 2, 0);
+      left.position.set(-width / 4 - width / 2 - 0.08, height / 2, 0); // start open (slid into wall)
+      right.position.set(width / 4 + width / 2 + 0.08, height / 2, 0);
       grp.add(left, right);
       this.group.add(grp);
       this.disposables.push(left, right);
@@ -722,9 +737,9 @@ export class LevelBuilder {
         this.disposables.push(dome);
         const ribMat = stdMat(pal.accent, { metal: 0.7, rough: 0.4 });
         for (let i = 0; i < 6; i++) {
-          const rib = new THREE.Mesh(new THREE.TorusGeometry(s.radius, 0.08, 6, 32, Math.PI), ribMat);
+          const rib = new THREE.Mesh(new THREE.TorusGeometry(s.ribRadius || s.radius, 0.08, 6, 32, Math.PI), ribMat);
           rib.rotation.y = (i / 6) * Math.PI + Math.PI / 12; // offset so rib feet miss the corridor axes
-          rib.position.set(s.pos[0], s.pos[1], s.pos[2]);
+          rib.position.set(s.pos[0], s.pos[1] + (s.ribY || 0), s.pos[2]);
           this.group.add(rib);
           this.disposables.push(rib);
         }
@@ -907,7 +922,7 @@ export class LevelBuilder {
       const target = d.closed ? 1 : 0;
       if (Math.abs(d.t - target) > 0.001) {
         d.t += Math.sign(target - d.t) * Math.min(Math.abs(target - d.t), dt * 2.5);
-        const open = d.width / 2;
+        const open = d.width / 2 + 0.08;
         d.left.position.x = -d.width / 4 - open * (1 - d.t);
         d.right.position.x = d.width / 4 + open * (1 - d.t);
       }

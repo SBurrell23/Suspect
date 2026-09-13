@@ -113,7 +113,7 @@ export class LocalPlayer {
     }
     if (steps === 6) this.accum = 0;
 
-    const p = this.predictor.renderPos(dt, this.renderPos);
+    const p = this.predictor.renderPos(dt, this.renderPos, this.accum / NET.SIM_DT);
     const s = this.predictor.state;
     const moving = this.moving;
     const sprint = moving && this.sprinting && this.predictor.lastMode === 'walk';

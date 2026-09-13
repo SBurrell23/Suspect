@@ -146,6 +146,6 @@ export default {
     { type: 'point', room: 'dome', local: [0, 0], y: 5, color: 0x9fbfff, intensity: 60, range: 24 },
     { type: 'point', room: 'spine', local: [0, 0], y: 7, color: 0x3fa7ff, intensity: 50, range: 20 },
   ],
-  special: [{ type: 'dome', room: 'dome', local: [0, 0], radius: 8.2 }],
+  special: [{ type: 'dome', room: 'dome', local: [0, 0], radius: 13.5, ribRadius: 8.2, ribY: 7 }],
   ambience: { reverb: 'small-room', bedTrack: 'ambient-space' },
 };

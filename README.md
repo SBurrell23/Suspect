@@ -1,6 +1,6 @@
 # SUSPECT — 3D social deduction in the browser
 
-A first-person, voice-chat social deduction game for 4–10 players. No game server, no binary assets:
+A first-person, voice-chat social deduction game for 3–10 players. No game server, no binary assets:
 every mesh is built from Three.js primitives, every texture is drawn to a canvas at runtime, every sound
 is synthesized with the Web Audio API, and networking is peer-to-peer over WebRTC (PeerJS for signaling).
 
@@ -10,7 +10,7 @@ is synthesized with the Web Audio API, and networking is peer-to-peer over WebRT
 
 1. One player clicks **Create room** and shares the 6-character code.
 2. Everyone else enters the code and clicks **Join**. Click **Enable microphone** in the lobby (optional — the game works text-only with `T`).
-3. The host picks the map and settings, then **Start game** (4+ players; append `?dev` to the URL to allow fewer while testing).
+3. The host picks the map and settings, then **Start game** (3+ players; append `?dev` to the URL to allow fewer while testing). With exactly 3 players one kill ends the round, so the crew must win by tasks or by voting.
 
 | Key | Action |
 | --- | --- |

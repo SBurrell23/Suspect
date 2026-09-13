@@ -661,8 +661,8 @@ class App {
   // ------------------------------------------------------------------ frame
   loop(t) {
     requestAnimationFrame((tt) => this.loop(tt));
-    const dt = Math.min(0.1, (t - this.lastT) / 1000);
-    this.lastT = t;
+    const dt = Math.max(0, Math.min(0.1, (t - this.lastT) / 1000));
+    this.lastT = Math.max(this.lastT, t);
     if (!this.net || !this.client || !this.localPlayer) { this.renderer.setRenderTarget(null); this.renderer.clear(); return; }
     const c = this.client, s = c.state, lp = this.localPlayer;
     const now = performance.now();

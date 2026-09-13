@@ -27,6 +27,7 @@ export class Predictor {
     this.world = world;
     this.level = level;
     this.state = makeMoveState();
+    this.prev = { x: 0, y: 0, z: 0 };
     this.history = [];
     this.tick = 1;
     this.offset = { x: 0, y: 0, z: 0 };
@@ -46,6 +47,7 @@ export class Predictor {
     const input = quantizeInput({ ...rawInput, tick: this.tick });
     const mode = this.modeFor(this.state, input);
     this.lastMode = mode;
+    this.prev.x = this.state.x; this.prev.y = this.state.y; this.prev.z = this.state.z;
     simulateStep(this.world, this.state, input, NET.SIM_DT, mode, this.speedMul);
     const s = this.state;
     this.history.push({ tick: input.tick, input, x: s.x, y: s.y, z: s.z, vx: s.vx, vy: s.vy, vz: s.vz, onGround: s.onGround });
@@ -69,7 +71,8 @@ export class Predictor {
       this.history.splice(0, idx + 1);
       return;
     }
-    const before = { x: this.state.x, y: this.state.y, z: this.state.z };
+    const al = this.lastAlpha ?? 1;
+    const before = { x: this.prev.x + (this.state.x - this.prev.x) * al, y: this.prev.y + (this.state.y - this.prev.y) * al, z: this.prev.z + (this.state.z - this.prev.z) * al };
     const s = this.state;
     s.x = host.x; s.y = host.y; s.z = host.z;
     s.vx = h.vx; s.vy = h.vy; s.vz = h.vz; s.onGround = h.onGround;
@@ -80,6 +83,7 @@ export class Predictor {
       e.x = s.x; e.y = s.y; e.z = s.z; e.vx = s.vx; e.vy = s.vy; e.vz = s.vz; e.onGround = s.onGround;
     }
     this.history.splice(0, idx + 1);
+    this.prev.x = s.x; this.prev.y = s.y; this.prev.z = s.z;
     // keep the rendered position continuous; the offset decays to zero over RECONCILE_MS
     const k = this.offsetT > 0 ? this.offsetT / (NET.RECONCILE_MS / 1000) : 0;
     this.offset.x = before.x - s.x + this.offset.x * k;
@@ -92,18 +96,23 @@ export class Predictor {
 
   _snap(host) {
     this.state.x = host.x; this.state.y = host.y; this.state.z = host.z;
+    this.prev.x = host.x; this.prev.y = host.y; this.prev.z = host.z;
     this.state.vx = this.state.vy = this.state.vz = 0;
   }
 
-  renderPos(dt, out) {
+  // Interpolate between the previous and current fixed step (alpha = accumulator / SIM_DT) so the
+  // camera moves smoothly at any frame rate instead of hopping 20 times a second.
+  renderPos(dt, out, alpha = 1) {
+    const a = Math.max(0, Math.min(1, alpha));
+    this.lastAlpha = a;
+    const s = this.state, p = this.prev;
+    out.x = p.x + (s.x - p.x) * a;
+    out.y = p.y + (s.y - p.y) * a;
+    out.z = p.z + (s.z - p.z) * a;
     if (this.offsetT > 0) {
       this.offsetT = Math.max(0, this.offsetT - dt);
       const k = this.offsetT / (NET.RECONCILE_MS / 1000);
-      out.x = this.state.x + this.offset.x * k;
-      out.y = this.state.y + this.offset.y * k;
-      out.z = this.state.z + this.offset.z * k;
-    } else {
-      out.x = this.state.x; out.y = this.state.y; out.z = this.state.z;
+      out.x += this.offset.x * k; out.y += this.offset.y * k; out.z += this.offset.z * k;
     }
     return out;
   }
@@ -114,6 +123,7 @@ export class Predictor {
     if (yaw !== undefined) s.yaw = yaw;
     s.vx = s.vy = s.vz = 0;
     s.onGround = true;
+    this.prev.x = x; this.prev.y = y; this.prev.z = z;
     this.history.length = 0;
     this.offset.x = this.offset.y = this.offset.z = 0;
     this.offsetT = 0;
