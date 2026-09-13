@@ -1,5 +1,6 @@
 import { el, clear, hexCss } from './dom.js';
 import { COLORS, SETTINGS_SCHEMA, NET } from '../config.js';
+import { LEVELS } from '../world/levels/index.js';
 
 // Start screen: name, color, create / join.
 export class MenuScreen {
@@ -119,7 +120,7 @@ export class LobbyPanel {
         input.checked = !!settings[def.key];
         input.addEventListener('change', () => this.cb.onSettings({ [def.key]: input.checked }));
       } else {
-        input = el('select', {}, ...def.options.map((o) => el('option', { value: o }, o)));
+        input = el('select', {}, ...def.options.map((o) => el('option', { value: o }, LEVELS[o]?.name || o)));
         input.value = settings[def.key];
         input.addEventListener('change', () => this.cb.onSettings({ [def.key]: input.value }));
       }

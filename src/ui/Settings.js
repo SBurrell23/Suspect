@@ -1,5 +1,5 @@
 import { el } from './dom.js';
-import { LS_KEY, LOCAL_DEFAULTS, ICE_SERVERS, PEER_SERVER } from '../config.js';
+import { LS_KEY, LOCAL_DEFAULTS } from '../config.js';
 import { icon } from './HUD.js';
 
 export function loadLocalSettings() {
@@ -47,8 +47,6 @@ export class SettingsPanel {
         ...[['WASD', 'move'], ['Shift', 'sprint'], ['E', 'use'], ['R', 'report'], ['Q', 'kill'], ['F', 'vent'], ['C', 'sabotage'], ['Tab', 'players'], ['T', 'chat'], ['V', 'push-to-talk'], ['M', 'mute mic'], ['Space / Ctrl', 'fly (ghost)']]
           .map(([k, v]) => el('div', { class: 'keyrow' }, el('kbd', {}, k), el('span', { class: 'dim' }, v)))),
       el('div', { class: 'dim small' }, 'Field of view is fixed at 75° and the camera is always first person, so nobody can see more than anyone else.'),
-      el('h4', {}, 'Network'),
-      el('div', { class: 'dim small' }, `Signaling: ${PEER_SERVER ? PEER_SERVER.host : 'PeerJS cloud'}. ICE: ${ICE_SERVERS.length} server(s)${ICE_SERVERS.some((s) => String(s.urls).startsWith('turn')) ? '' : ' (no TURN configured, see config.js)'}.`),
       el('div', { class: 'row', style: { marginTop: '6px' } }, el('button', { class: 'danger', onClick: () => onLeave() }, 'Leave room')),
     );
     root.appendChild(this.root);

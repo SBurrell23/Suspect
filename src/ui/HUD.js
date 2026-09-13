@@ -131,7 +131,7 @@ export class HUD {
     if (!visible) { this.sabCdEl.hidden = true; return; }
     this.sabCdEl.hidden = false;
     if (active) { this.sabCdEl.className = 'sabcd active'; this.sabCdEl.textContent = 'SABOTAGE IN PROGRESS'; }
-    else if (ms > 0) { this.sabCdEl.className = 'sabcd'; this.sabCdEl.textContent = `NEXT SABOTAGE IN ${Math.ceil(ms / 1000)}s`; }
+    else if (ms > 0) { this.sabCdEl.className = 'sabcd'; this.sabCdEl.textContent = `NEXT SABOTAGE AVAILABLE IN ${Math.ceil(ms / 1000)}s`; }
     else if (remaining === 0) { this.sabCdEl.className = 'sabcd dim'; this.sabCdEl.textContent = 'NO SABOTAGES LEFT'; }
     else { this.sabCdEl.className = 'sabcd ready'; this.sabCdEl.textContent = 'SABOTAGE READY'; }
   }

@@ -154,11 +154,11 @@ export default {
     { type: 'hemi', color: 0xbfe3ff, ground: 0x1e3a1e, intensity: 0.7 },
     { type: 'ambient', color: 0x2f4f2f, intensity: 0.25 },
     // dappled daylight through the dome: a cookie-mapped spotlight from above
-    { type: 'spot', pos: [4, 34, 6], target: [0, 0, 0], color: 0xfff6d8, intensity: 1100, range: 60, angle: 0.72, penumbra: 0.4, decay: 1.2, castShadow: true, cookie: true },
+    { type: 'spot', pos: [4, 34, 6], target: [0, 0, 0], color: 0xfff6d8, intensity: 1100, range: 60, angle: 0.72, penumbra: 0.4, decay: 1.2, castShadow: true, cookie: true, fixture: false },
     { type: 'point', pos: [0, 3.7, -23], color: 0xdfefff, intensity: 40, range: 18 },
     { type: 'point', pos: [-25, 3.7, -6], color: 0xfff0cc, intensity: 40, range: 18 },
-    { type: 'point', pos: [-28, 2.6, 11], color: 0x3388ff, intensity: 22, range: 12 },
-    { type: 'point', pos: [-21, 2.2, 17], color: 0x33ff88, intensity: 18, range: 11 },
+    { type: 'point', pos: [-28, 2.6, 11], color: 0x3388ff, intensity: 22, range: 12, fixture: false }, // bioluminescence
+    { type: 'point', pos: [-21, 2.2, 17], color: 0x33ff88, intensity: 18, range: 11, fixture: false },
     { type: 'point', pos: [0, 3.7, 22], color: 0xffe0aa, intensity: 35, range: 16 },
     { type: 'point', pos: [24, 4.5, 7], color: 0xcfe8ff, intensity: 30, range: 18 },
     { type: 'point', pos: [36, 4.5, -7], color: 0xcfe8ff, intensity: 30, range: 18 },

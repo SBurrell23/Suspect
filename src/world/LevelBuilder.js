@@ -684,12 +684,34 @@ export class LevelBuilder {
         light.shadow.bias = -0.0005;
         this._shadowCount++;
       }
+      if ((l.type === 'point' || l.type === 'spot' || !l.type) && l.fixture !== false && l.pos) this._buildFixture(l.pos, color, l.type === 'spot');
       if (l.flare) this.dynamic.flareLights.push({ light, base: light.intensity });
       if (l.sunSweep) { this.dynamic.sun = light; this.dynamic.sunBase = { pos: [...l.pos], period: l.sunSweep }; }
       this.group.add(light);
       this.lights.push(light);
       this.disposables.push(light);
     }
+  }
+
+  // A visible lamp for a light source: dark housing, glowing bulb, and a stem up to the ceiling.
+  _buildFixture(pos, color, spot) {
+    const zone = this._miscZone();
+    const housing = stdMat(0x1a1e24, { metal: 0.8, rough: 0.35 });
+    const bulb = stdMat(color, { emissive: color, ei: 2.2, rough: 0.3 });
+    const [x, y, z] = pos;
+    let stem = 0.5;
+    const hit = this.collision.raycast([x, y + 0.2, z], [0, 1, 0], 6);
+    if (hit !== null) stem = Math.min(hit + 0.2, 6);
+    const g = spot ? new THREE.ConeGeometry(0.45, 0.5, 14, 1, true) : new THREE.CylinderGeometry(0.34, 0.42, 0.2, 14);
+    if (spot) g.rotateX(Math.PI);
+    g.translate(x, y + (spot ? 0.25 : 0.12), z);
+    this._bucket(zone.id, housing).push(g);
+    const rod = new THREE.CylinderGeometry(0.035, 0.035, stem, 6);
+    rod.translate(x, y + 0.22 + stem / 2, z);
+    this._bucket(zone.id, housing).push(rod);
+    const b = spot ? new THREE.CylinderGeometry(0.3, 0.3, 0.06, 14) : new THREE.SphereGeometry(0.17, 12, 8);
+    b.translate(x, y, z);
+    this._bucket(zone.id, bulb).push(b);
   }
 
   _buildSpecials() {

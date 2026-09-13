@@ -31,8 +31,13 @@ export default {
   ],
   // Catwalk ring at y=5 around the shaft, landings, and an upper platform to the control room
   platforms: [
-    { pos: [0, 5, -9], size: [21, 0.3, 3], grating: true, rails: ['s'] },
-    { pos: [0, 5, 9], size: [21, 0.3, 3], grating: true, rails: ['n'] },
+    // north/south walkways: railed centre piece + open corner tiles so the side walkways connect
+    { pos: [0, 5, -9], size: [15, 0.3, 3], grating: true, rails: ['s'] },
+    { pos: [-9, 5, -9], size: [3, 0.3, 3], grating: true, rails: [] },
+    { pos: [9, 5, -9], size: [3, 0.3, 3], grating: true, rails: [] },
+    { pos: [0, 5, 9], size: [15, 0.3, 3], grating: true, rails: ['n'] },
+    { pos: [-9, 5, 9], size: [3, 0.3, 3], grating: true, rails: [] },
+    { pos: [9, 5, 9], size: [3, 0.3, 3], grating: true, rails: [] },
     { pos: [-9, 5, 0], size: [3, 0.3, 15], grating: true, rails: ['e'] },
     { pos: [9, 5, 0], size: [3, 0.3, 15], grating: true, rails: ['w'] },
     { pos: [-12, 5, 9], size: [3, 0.3, 3], grating: true, rails: ['n', 'w'] },
@@ -122,7 +127,7 @@ export default {
   ],
   lights: [
     { type: 'ambient', color: 0x664433, intensity: 0.22 },
-    { type: 'point', pos: [0, 4, 0], color: 0xff8833, intensity: 160, range: 44, flare: true, castShadow: true },
+    { type: 'point', pos: [0, 4, 0], color: 0xff8833, intensity: 160, range: 44, flare: true, fixture: false }, // the molten shaft is the source
     { type: 'point', pos: [-14, 12, -14], color: 0xff9944, intensity: 40, range: 24 },
     { type: 'point', pos: [14, 12, -14], color: 0xff9944, intensity: 40, range: 24 },
     { type: 'point', pos: [-14, 12, 14], color: 0xff9944, intensity: 40, range: 24 },
