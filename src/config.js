@@ -27,6 +27,7 @@ export const NET = {
   INPUT_REDUNDANCY: 3,
   HOST_CLAIM_WAIT_MS: 500,
   PEER_TIMEOUT_MS: 9000,
+  PING_INTERVAL_MS: 2000,
 };
 
 // ---- Player / movement ----------------------------------------------------
@@ -35,7 +36,7 @@ export const PLAYER = {
   HEIGHT: 1.8,
   EYE_HEIGHT: 1.6,
   WALK_SPEED: 4.2,
-  SPRINT_SPEED: 6.2,
+  SPRINT_SPEED: 4.7, // sprint adds 0.5 m/s over walking
   GHOST_SPEED: 6.0,
   ZERO_G_THRUST: 7.0,
   ZERO_G_DRAG: 0.9, // per sim step
@@ -48,7 +49,7 @@ export const PLAYER = {
 
 export const CAMERA = {
   FOV: 75,
-  FOV_SPRINT: 82,
+  FOV_SPRINT: 78,
   FOV_KILL: 68,
   THIRD_PERSON_DIST: 3.0,
   THIRD_PERSON_SHOULDER: 0.6,
@@ -65,6 +66,7 @@ export const RULES = {
   RESULT_MS: 7000,
   GAME_OVER_MS: 10000,
   SABOTAGE_COOLDOWN: 30,
+  SABOTAGE_FIRST_COOLDOWN: 15,
   CRITICAL_SABOTAGE_TIME: 45,
   DOOR_CLOSE_TIME: 10,
   DOOR_COOLDOWN: 30,
@@ -108,8 +110,7 @@ export const SETTINGS_SCHEMA = [
 export const LOCAL_DEFAULTS = {
   sensitivity: 1.0,
   headBob: true,
-  thirdPerson: false,
-  fov: 75,
+  antialias: true,
   pushToTalk: false,
   masterVolume: 0.8,
   musicVolume: 0.5,

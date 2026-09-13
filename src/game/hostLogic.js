@@ -29,8 +29,7 @@ export class HostGame {
     this.meeting = null;
     this.sabotage = null;
     this.sabotageCooldownEnd = 0;
-    this.doorCooldowns = new Map();
-    this.doorTimers = new Map();
+    this.usedSabotages = new Set();
     this.tasksDone = 0;
     this.tasksTotal = 0;
     this.tick = 0;
@@ -202,10 +201,8 @@ export class HostGame {
     this.level = this.requestLevel(levelId);
     this.levelId = levelId;
     this.bodies = []; this.sabotage = null; this.meeting = null; this.winner = null;
-    this.sabotageCooldownEnd = this.now() + 10000;
-    this.doorCooldowns.clear();
-    for (const t of this.doorTimers.values()) clearTimeout(t);
-    this.doorTimers.clear();
+    this.sabotageCooldownEnd = this.now() + RULES.ROLE_ASSIGN_MS + RULES.SABOTAGE_FIRST_COOLDOWN * 1000;
+    this.usedSabotages = new Set();
     const slots = [...this.players.keys()];
     const count = impostorCountFor(slots.length, this.settings.impostorCount);
     const { roles, impostors } = assignRoles(slots, count);
@@ -225,7 +222,7 @@ export class HostGame {
     }
     this.sm.transition('ROLE_ASSIGN');
     this.phaseEndAt = this.now() + RULES.ROLE_ASSIGN_MS;
-    this.broadcast({ t: MSG.GAME_START, levelId, settings: this.settings, hostTime: this.now(), roundAt: this.phaseEndAt, tasksTotal: this.tasksTotal });
+    this.broadcast({ t: MSG.GAME_START, levelId, settings: this.settings, hostTime: this.now(), roundAt: this.phaseEndAt, tasksTotal: this.tasksTotal, sabotageCooldownEnd: this.sabotageCooldownEnd, used: [] });
     for (const p of this.players.values()) {
       this.broadcast({ t: MSG.TELEPORT, slot: p.slot, x: p.sim.x, y: p.sim.y, z: p.sim.z, yaw: p.sim.yaw });
       this.send(p.slot, { t: MSG.ROLE_ASSIGN, role: p.role, impostors: p.role === 'impostor' ? [...impostors] : null, tasks: serializeTasks(p.tasks), killCooldownEnd: p.killCooldownEnd, emergencies: p.emergencies, hostTime: this.now() });
@@ -242,8 +239,6 @@ export class HostGame {
     this.level = this.requestLevel('lobby');
     this.levelId = 'lobby';
     this.bodies = []; this.sabotage = null; this.meeting = null; this.winner = null;
-    for (const t of this.doorTimers.values()) clearTimeout(t);
-    this.doorTimers.clear();
     const spawns = this.level.spawnPoints(NET.MAX_PLAYERS);
     for (const p of this.players.values()) {
       p.alive = true; p.role = null; p.tasks = []; p.venting = false; p.ventId = null; p.minigame = false; p.ready = false;
@@ -413,30 +408,32 @@ export class HostGame {
     const def = SABOTAGES[type];
     if (!def) return;
     const now = this.now();
-    if (type === 'doors') {
-      const room = msg.room;
-      const doors = this.level.doors.filter((d) => d.room === room);
-      if (!doors.length) return;
-      if ((this.doorCooldowns.get(room) || 0) > now) return;
-      this.doorCooldowns.set(room, now + RULES.DOOR_COOLDOWN * 1000);
-      for (const d of doors) {
-        this.level.setDoor(d.id, true);
-        if (this.doorTimers.has(d.id)) clearTimeout(this.doorTimers.get(d.id));
-        this.doorTimers.set(d.id, setTimeout(() => { this.level.setDoor(d.id, false); this.doorTimers.delete(d.id); this._broadcastDoors(); }, RULES.DOOR_CLOSE_TIME * 1000));
-      }
-      this._broadcastDoors();
-      return;
-    }
     if (this.sabotage) return; // one at a time
     if (now < this.sabotageCooldownEnd) return;
+    if (this.usedSabotages.has(type)) return; // each sabotage type once per round
+    this.usedSabotages.add(type);
     this.sabotage = makeSabotage(type, now);
     this.sabotage.holdSlots = [null, null];
-    this.broadcast({ t: MSG.SABOTAGE_START, sabotage: publicSabotage(this.sabotage), hostTime: now });
+    this.broadcast({ t: MSG.SABOTAGE_START, sabotage: publicSabotage(this.sabotage), hostTime: now, used: [...this.usedSabotages] });
+    if (type === 'wormhole') { this._wormhole(); this._endSabotage(true); }
   }
 
-  _broadcastDoors() {
-    const closed = this.level.doors.filter((d) => d.closed).map((d) => d.id);
-    this.broadcast({ t: MSG.DOOR_STATE, closed });
+  // Scatter everyone to a random spot in a random room.
+  _wormhole() {
+    const rooms = [...this.level.rooms.values()].filter((r) => r.shape === 'box' && !r.glass);
+    if (!rooms.length) return;
+    for (const p of this.players.values()) {
+      const r = rooms[Math.floor(Math.random() * rooms.length)];
+      const lx = (Math.random() - 0.5) * Math.max(1, r.w - 4);
+      const lz = (Math.random() - 0.5) * Math.max(1, r.d - 4);
+      const c = Math.cos(r.ry), s = Math.sin(r.ry);
+      const x = r.cx + lx * c + lz * s, z = r.cz - lx * s + lz * c;
+      const wasVenting = p.venting;
+      p.venting = false; p.ventId = null; p.minigame = false;
+      this._releaseHold(p.slot);
+      this.teleport(p, x, r.floorY + 0.05, z, Math.random() * Math.PI * 2);
+      if (wasVenting) this.send(p.slot, { t: MSG.VENT_STATE, venting: false });
+    }
   }
 
   _fixStation(type, index) {
@@ -485,7 +482,7 @@ export class HostGame {
     if (!s) return;
     this.sabotage = null;
     this.sabotageCooldownEnd = this.now() + RULES.SABOTAGE_COOLDOWN * 1000;
-    this.broadcast({ t: MSG.SABOTAGE_END, type: s.type, fixed, cooldownEnd: this.sabotageCooldownEnd, hostTime: this.now() });
+    this.broadcast({ t: MSG.SABOTAGE_END, type: s.type, fixed, cooldownEnd: this.sabotageCooldownEnd, hostTime: this.now(), used: [...this.usedSabotages] });
     if (!fixed) this.endGame('impostor', s.type === 'reactor' ? 'The reactor melted down.' : 'The crew ran out of oxygen.');
   }
 
@@ -574,8 +571,5 @@ export class HostGame {
     }
   }
 
-  destroy() {
-    for (const t of this.doorTimers.values()) clearTimeout(t);
-    this.doorTimers.clear();
-  }
+  destroy() {}
 }

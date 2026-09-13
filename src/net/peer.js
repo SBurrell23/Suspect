@@ -37,7 +37,7 @@ export class Net {
     for (const e of [...this.peers.values()]) {
       if (!e.announced) continue;
       if (now - (e.lastSeen || now) > NET.PEER_TIMEOUT_MS) { console.warn('peer timed out', e.id); this._onClose(e.id, 'evt'); continue; }
-      try { e.evt.send({ t: MSG.PING }); } catch (err) { /* ignore */ }
+      try { e.evt.send({ t: MSG.PING, ts: Date.now() }); } catch (err) { /* ignore */ }
     }
   }
 
@@ -174,7 +174,8 @@ export class Net {
 
   _onEvt(from, msg) {
     if (!msg || typeof msg !== 'object') return;
-    if (msg.t === MSG.PING) return;
+    if (msg.t === MSG.PING) { const e = this.peers.get(from); if (e && e.evtOpen) { try { e.evt.send({ t: MSG.PONG, ts: msg.ts }); } catch (err) { /* */ } } return; }
+    if (msg.t === MSG.PONG) { const e = this.peers.get(from); if (e && typeof msg.ts === 'number') e.rtt = Math.max(0, Date.now() - msg.ts); return; }
     if (msg.t === MSG.ROSTER && msg.connect) {
       for (const pid of msg.peers || []) {
         if (pid === this.myId || this.peers.get(pid)?.announced) continue;
@@ -218,6 +219,7 @@ export class Net {
   }
 
   peerIds() { return [...this.peers.keys()].filter((id) => this.peers.get(id).announced); }
+  rtt(id) { const e = this.peers.get(id); return e && e.rtt !== undefined ? e.rtt : null; }
 
   send(id, msg) {
     if (id === this.myId) { this.emit('evt', this.myId, msg); return true; }

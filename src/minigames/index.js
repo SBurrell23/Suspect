@@ -1,4 +1,4 @@
-import coolantPurge from './coolantPurge.js';
+import valveSequence from './valveSequence.js';
 import wireSplice from './wireSplice.js';
 import spectrometer from './spectrometer.js';
 import cargoSort from './cargoSort.js';
@@ -8,10 +8,11 @@ import debrisClear from './debrisClear.js';
 import seedCatalogue from './seedCatalogue.js';
 import dataUpload from './dataUpload.js';
 import reactorCalibrate from './reactorCalibrate.js';
+import voicePrint from './voicePrint.js';
 import { lightsFix, commsFix, reactorHold, o2Code } from './fixes.js';
 
 export const MINIGAMES = {
-  coolantPurge, wireSplice, spectrometer, cargoSort, airlockPressurize, identScan, debrisClear, seedCatalogue, dataUpload, reactorCalibrate,
+  valveSequence, wireSplice, spectrometer, cargoSort, airlockPressurize, identScan, debrisClear, seedCatalogue, dataUpload, reactorCalibrate, voicePrint,
   lightsFix, commsFix, reactorHold, o2Code,
 };
 

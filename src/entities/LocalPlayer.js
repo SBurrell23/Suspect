@@ -27,7 +27,7 @@ export class LocalPlayer {
     this.moveEnabled = true;
     this.inMinigame = false;
     this.bobT = 0;
-    this.fov = settings.fov;
+    this.fov = CAMERA.FOV;
     this.killFovT = 0;
     this.renderPos = { x: 0, y: 0, z: 0 };
     this.lastStepPos = { x: 0, y: 0, z: 0 };
@@ -133,7 +133,7 @@ export class LocalPlayer {
 
     // FOV: sprint punch, kill pull-in
     if (this.killFovT > 0) this.killFovT -= dt;
-    const targetFov = this.killFovT > 0 ? CAMERA.FOV_KILL : sprint ? this.settings.fov + (CAMERA.FOV_SPRINT - CAMERA.FOV) : this.settings.fov;
+    const targetFov = this.killFovT > 0 ? CAMERA.FOV_KILL : sprint ? CAMERA.FOV_SPRINT : CAMERA.FOV;
     this.fov += (targetFov - this.fov) * Math.min(1, dt * 8);
     if (Math.abs(this.camera.fov - this.fov) > 0.05) { this.camera.fov = this.fov; this.camera.updateProjectionMatrix(); }
 
@@ -143,26 +143,9 @@ export class LocalPlayer {
     cam.rotation.y = this.yaw;
     cam.rotation.x = this.pitch;
     cam.rotation.z = 0;
-    if (this.settings.thirdPerson) {
-      // shoulder cam: same FOV cone and vision radius, so it grants no advantage
-      const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
-      const rx = Math.cos(this.yaw), rz = -Math.sin(this.yaw);
-      const eye = this._tmp.set(p.x + rx * CAMERA.THIRD_PERSON_SHOULDER, eyeY + 0.2, p.z + rz * CAMERA.THIRD_PERSON_SHOULDER);
-      const back = this._tmp2.set(-fx * Math.cos(this.pitch), -Math.sin(this.pitch) * -1, -fz * Math.cos(this.pitch));
-      // pull the camera in if a wall is behind us
-      let dist = CAMERA.THIRD_PERSON_DIST;
-      const hit = this.world ? this.world.raycast([eye.x, eye.y, eye.z], [back.x, back.y, back.z], dist + 0.3) : null;
-      if (hit !== null) dist = Math.max(0.5, hit - 0.3);
-      cam.position.set(eye.x + back.x * dist, eye.y + back.y * dist, eye.z + back.z * dist);
-      this.view.group.visible = true;
-      this.view.group.position.set(p.x, p.y, p.z);
-      this.view.group.rotation.y = this.yaw;
-      this.view.setSpeaking(this.speaking);
-      this.view.update(dt, { moving, sprinting: sprint, distToCamera: 0 });
-    } else {
-      cam.position.set(p.x + bobX, eyeY, p.z);
-      this.view.group.visible = false;
-    }
+    // First person only: the whole game is about what you cannot see behind you.
+    cam.position.set(p.x + bobX, eyeY, p.z);
+    this.view.group.visible = false;
   }
 
   killPunch() { this.killFovT = 0.5; }

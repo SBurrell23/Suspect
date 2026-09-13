@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 // Fog-of-war post-process. The scene is rendered to a target with a depth texture; this pass
-// reconstructs the true view distance per pixel and darkens to black at the vision radius.
+// reconstructs the true view distance per pixel and fades to a gray fog at the vision radius.
 // (Not THREE.Fog — that would leave far players renderable; player meshes are also distance-culled.)
 const VERT = /* glsl */ `
   varying vec2 vUv;
@@ -12,7 +12,7 @@ const FRAG = /* glsl */ `
   uniform sampler2D tDiffuse;
   uniform sampler2D tDepth;
   uniform float uNear, uFar, uRadius, uAspect, uTanHalfFov, uPulse, uFlash, uTime, uSkyDark;
-  uniform vec3 uFlashColor;
+  uniform vec3 uFlashColor, uFogColor;
   varying vec2 vUv;
   float viewZ(float d) {
     float z = d * 2.0 - 1.0;
@@ -26,12 +26,14 @@ const FRAG = /* glsl */ `
     float vx = -vz * ndc.x * uTanHalfFov * uAspect;
     float vy = -vz * ndc.y * uTanHalfFov;
     float dist = length(vec3(vx, vy, vz));
-    float dark = smoothstep(uRadius * 0.5, uRadius, dist);
-    if (d >= 0.99999) dark = uSkyDark;
-    vec3 col = c.rgb * (1.0 - dark);
-    // soft edge vignette so the radius reads as a pool of light, not a hard disc
-    float edge = smoothstep(0.75, 1.45, length(ndc));
-    col *= 1.0 - edge * 0.3;
+    float fog = smoothstep(uRadius * 0.45, uRadius, dist);
+    if (d >= 0.99999) fog = uSkyDark;
+    // gray fog, slightly darker with distance so depth still reads
+    vec3 fogCol = uFogColor * (1.0 - 0.35 * fog);
+    vec3 col = mix(c.rgb, fogCol, fog);
+    // soft edge vignette so the radius reads as a pool of clarity, not a hard disc
+    float edge = smoothstep(0.8, 1.5, length(ndc));
+    col *= 1.0 - edge * 0.25;
     // vulnerability pulse: red rim when someone is near while you are locked in a minigame
     float rim = smoothstep(0.5, 1.25, length(ndc));
     col = mix(col, vec3(0.75, 0.04, 0.04), rim * uPulse * (0.55 + 0.45 * sin(uTime * 9.0)));
@@ -43,25 +45,17 @@ const FRAG = /* glsl */ `
 `;
 
 export class VisionPass {
-  constructor(renderer) {
+  constructor(renderer, { samples = 4 } = {}) {
     this.renderer = renderer;
+    this.samples = samples;
     const size = renderer.getSize(new THREE.Vector2());
     const pr = renderer.getPixelRatio();
     this.width = Math.max(1, Math.floor(size.x * pr));
     this.height = Math.max(1, Math.floor(size.y * pr));
-    this.depthTexture = new THREE.DepthTexture(this.width, this.height);
-    this.depthTexture.type = THREE.UnsignedIntType;
-    this.rt = new THREE.WebGLRenderTarget(this.width, this.height, {
-      depthTexture: this.depthTexture,
-      depthBuffer: true,
-      stencilBuffer: false,
-      minFilter: THREE.LinearFilter,
-      magFilter: THREE.LinearFilter,
-    });
     this.material = new THREE.ShaderMaterial({
       uniforms: {
-        tDiffuse: { value: this.rt.texture },
-        tDepth: { value: this.depthTexture },
+        tDiffuse: { value: null },
+        tDepth: { value: null },
         uNear: { value: 0.1 },
         uFar: { value: 500 },
         uRadius: { value: 12 },
@@ -70,6 +64,7 @@ export class VisionPass {
         uPulse: { value: 0 },
         uFlash: { value: 0 },
         uFlashColor: { value: new THREE.Color(1, 0, 0) },
+        uFogColor: { value: new THREE.Color(0x3a414a) },
         uTime: { value: 0 },
         uSkyDark: { value: 0.55 },
       },
@@ -78,12 +73,39 @@ export class VisionPass {
       depthTest: false,
       depthWrite: false,
     });
+    this._makeTarget();
     this.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.material);
     this.quad.frustumCulled = false;
     this.quadScene = new THREE.Scene();
     this.quadScene.add(this.quad);
     this.quadCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     this.enabled = true;
+    this.drawCalls = 0;
+    this.triangles = 0;
+  }
+
+  _makeTarget() {
+    if (this.rt) { this.rt.dispose(); this.depthTexture.dispose(); }
+    this.depthTexture = new THREE.DepthTexture(this.width, this.height);
+    this.depthTexture.type = THREE.UnsignedIntType;
+    // MSAA on the offscreen target is what gives the edges their antialiasing.
+    this.rt = new THREE.WebGLRenderTarget(this.width, this.height, {
+      depthTexture: this.depthTexture,
+      depthBuffer: true,
+      stencilBuffer: false,
+      samples: this.samples,
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+    });
+    this.material.uniforms.tDiffuse.value = this.rt.texture;
+    this.material.uniforms.tDepth.value = this.depthTexture;
+  }
+
+  setSamples(n) {
+    n = n | 0;
+    if (n === this.samples) return;
+    this.samples = n;
+    this._makeTarget();
   }
 
   setSize(w, h) {
@@ -105,6 +127,7 @@ export class VisionPass {
     u.uFlash.value = params.flash || 0;
     u.uSkyDark.value = params.skyDark ?? 0.55;
     if (params.flashColor) u.uFlashColor.value.set(params.flashColor);
+    if (params.fogColor !== undefined) u.uFogColor.value.set(params.fogColor);
     u.uTime.value = params.time || 0;
     this.renderer.setRenderTarget(this.rt);
     this.renderer.clear();

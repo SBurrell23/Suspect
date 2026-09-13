@@ -1,7 +1,7 @@
 // LEVEL 2 — ORBITAL RING (curved). A torus station: the main corridor is a real 360° ring
 // (built from ~160 curved segments) so nothing is ever visible at long range — people rise into
 // view around the bend. Rooms hang off the ring at angles and are auto-rotated to face it.
-// The Zero-G Spine at the hub disables gravity.
+// The Spine at the hub is a tall shaft that doubles as a public vent.
 //
 // NOTE: the floor is flat (gravity is straight down everywhere); the curvature is horizontal.
 // See README "Known deviations" — the spec's re-oriented-up-vector torus was shipped as the fallback.
@@ -12,6 +12,7 @@ export default {
   id: 'orbitalRing',
   name: 'Orbital Ring',
   palette: { primary: 0xcfd6dd, accent: 0x3fa7ff, floor: 0x9aa4ad, wall: 0xd5dbe1, ceiling: 0xbfc7ce, emissive: 0x3fa7ff, surface: 'metal', floorTex: 'tiles', wallTex: 'wall' },
+  fogColor: 0x39414c,
   background: 0x02030a,
   sky: 'stars',
   spawn: { room: 'commons', local: [0, 3] },
@@ -25,7 +26,7 @@ export default {
     { id: 'airlock', name: 'Airlock', attach: { ring: 'hab', angle: 180, gap: 4 }, size: [8, 3.5, 8], reverb: 'small-room', wallColor: 0x8d979f, floorColor: 0x6b747b },
     { id: 'dome', name: 'Observation Dome', attach: { ring: 'hab', angle: 240, gap: 4 }, size: [16, 7, 16], open: true, reverb: 'large-metal', floorColor: 0x2a3340, wallColor: 0x3a4652 },
     { id: 'commons', name: 'Commons', attach: { ring: 'hab', angle: 300, gap: 4 }, size: [14, 4, 12], reverb: 'small-room' },
-    { id: 'spine', name: 'Zero-G Spine', attach: { ring: 'hab', angle: 90, side: 'inner', gap: 22 }, size: [10, 14, 10], zeroG: true, reverb: 'large-metal', wallColor: 0x7c8894, floorColor: 0x55606a },
+    { id: 'spine', name: 'Zero-G Spine', attach: { ring: 'hab', angle: 90, side: 'inner', gap: 22 }, size: [10, 14, 10], reverb: 'large-metal', wallColor: 0x7c8894, floorColor: 0x55606a },
   ],
   corridors: [
     { from: 'hab', to: 'hydro', width: 3, height: 3.2 },
@@ -100,7 +101,7 @@ export default {
   ],
   taskStations: [
     { id: 'ts_hydro_seed', room: 'hydro', local: [-3, 5.4], rot: Math.PI, minigame: 'seedCatalogue', label: 'Seed Log' },
-    { id: 'ts_hydro_nutr', room: 'hydro', local: [6.4, 0], rot: -H, minigame: 'coolantPurge', label: 'Nutrient' },
+    { id: 'ts_hydro_nutr', room: 'hydro', local: [6.4, 0], rot: -H, minigame: 'valveSequence', label: 'Nutrient' },
     { id: 'ts_comms_upload', room: 'comms', local: [0, 4.4], rot: Math.PI, minigame: 'dataUpload', label: 'Upload', downloadAt: 'ts_med_download' },
     { id: 'ts_comms_spec', room: 'comms', local: [4.4, -1], rot: -H, minigame: 'spectrometer', label: 'Antenna' },
     { id: 'ts_med_download', room: 'medbay', local: [5.4, 1], rot: -H, minigame: 'dataUpload', label: 'Download', downloadOnly: true },
@@ -110,10 +111,10 @@ export default {
     { id: 'ts_dome_debris', room: 'dome', local: [-7.4, -2], rot: H, minigame: 'debrisClear', label: 'Debris' },
     { id: 'ts_dome_wire', room: 'dome', local: [7.4, -2], rot: -H, minigame: 'wireSplice', label: 'Wiring' },
     { id: 'ts_com_cargo', room: 'commons', local: [6.4, -2], rot: -H, minigame: 'cargoSort', label: 'Cargo' },
-    { id: 'ts_com_wire', room: 'commons', local: [-6.4, -2], rot: H, minigame: 'wireSplice', label: 'Wiring' },
+    { id: 'ts_com_wire', room: 'commons', local: [-6.4, -2], rot: H, minigame: 'voicePrint', label: 'Voice ID' },
     { id: 'ts_ring_wire', room: 'hab', polar: [30, 32.4], y: 0, rot: 0, minigame: 'wireSplice', label: 'Junction' },
     { id: 'ts_ring_cal', room: 'hab', polar: [200, 27.6], rot: 0, minigame: 'reactorCalibrate', label: 'Gyro' },
-    { id: 'ts_spine_purge', room: 'spine', local: [-4.4, -2], rot: H, minigame: 'coolantPurge', label: 'Thrusters' },
+    { id: 'ts_spine_purge', room: 'spine', local: [-4.4, -2], rot: H, minigame: 'valveSequence', label: 'Thrusters' },
   ],
   sabotageStations: [
     { id: 'fix_lights', type: 'lights', room: 'hab', polar: [345, 32.4], rot: 0, label: 'Electrical' },

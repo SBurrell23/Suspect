@@ -7,7 +7,7 @@ import { encodeInputs, decodeInputs, decodeSnapshot } from './net/snapshot.js';
 import { HostGame } from './game/hostLogic.js';
 import { ClientGame } from './game/clientLogic.js';
 import { currentStation } from './game/tasks.js';
-import { SABOTAGES } from './game/sabotage.js';
+import { SABOTAGES, SABOTAGE_ORDER } from './game/sabotage.js';
 import { LevelBuilder } from './world/LevelBuilder.js';
 import { getLevel } from './world/levels/index.js';
 import { VisionPass } from './world/vision.js';
@@ -23,6 +23,7 @@ import { MeetingScreen } from './ui/MeetingScreen.js';
 import { PlayerList } from './ui/PlayerList.js';
 import { SettingsPanel, loadLocalSettings, saveLocalSettings } from './ui/Settings.js';
 import { el, clear } from './ui/dom.js';
+import { icon } from './ui/HUD.js';
 
 const CLIENT_TO_HOST = new Set([
   MSG.JOIN, MSG.SET_NAME, MSG.SET_COLOR, MSG.READY, MSG.START_GAME, MSG.SET_SETTINGS, MSG.TASK_COMPLETE, MSG.KILL_ATTEMPT,
@@ -51,7 +52,7 @@ class App {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x05070c);
     this.camera = new THREE.PerspectiveCamera(this.local.fov, window.innerWidth / window.innerHeight, 0.1, 500);
-    this.vision = new VisionPass(this.renderer);
+    this.vision = new VisionPass(this.renderer, { samples: this.local.antialias ? 4 : 0 });
 
     // ---- audio (context starts suspended until a user gesture)
     this.sound = new SoundEngine();
@@ -86,7 +87,7 @@ class App {
     });
     this.settings = new SettingsPanel(this.ui, {
       local: this.local,
-      onChange: () => { this._applyVolumes(); this.voice?.setPushToTalk(this.local.pushToTalk); if (this.localPlayer) this.localPlayer.settings = this.local; },
+      onChange: () => { this._applyVolumes(); this.voice?.setPushToTalk(this.local.pushToTalk); this.vision.setSamples(this.local.antialias ? 4 : 0); if (this.localPlayer) this.localPlayer.settings = this.local; },
       onResume: () => { this.settings.hide(); this.localPlayer?.requestPointerLock(this.canvas); },
       onLeave: () => this.leave(),
     });
@@ -278,7 +279,7 @@ class App {
     c.on('error', (m) => { this.hud.toast(m.message || m.code, 5000); if (m.code === 'IN_PROGRESS' || m.code === 'FULL') { this.menu.show(); this.menu.setError(m.message); } });
     c.on('playerLeft', (m) => { const r = this.remotes.get(m.slot); if (r) { r.dispose(); this.remotes.delete(m.slot); } this.hud.toast(`${m.name} left.`); });
     c.on('teleport', (m) => {
-      if (m.slot === s.mySlot) this.localPlayer.teleport(m.x, m.y, m.z, m.yaw);
+      if (m.slot === s.mySlot) { this.localPlayer.teleport(m.x, m.y, m.z, m.yaw); if (this.minigame && s.phase === 'ROUND') this.closeMinigame(); }
       else this.remotes.get(m.slot)?.teleport(m.x, m.y, m.z, m.yaw);
     });
     c.on('gameStart', ({ levelId }) => {
@@ -324,6 +325,7 @@ class App {
       this._refreshActions();
     });
     c.on('kill', (m) => {
+      this.flashColor.set(0xff0000);
       const body = m.body;
       const b = new DeadBody(body.id, body.slot, COLORS[body.colorIdx]?.hex || 0xff0000, body, body.yaw);
       this.scene.add(b.group);
@@ -367,6 +369,13 @@ class App {
     c.on('taskAck', (m) => { this.sound.play(m.done ? 'taskComplete' : 'ping'); this._refreshTasks(); if (!m.done) this.hud.toast('Now go to the download station.'); });
     c.on('sabotageStart', (sab) => {
       const def = SABOTAGES[sab.type];
+      if (sab.type === 'wormhole') {
+        this.closeMinigame();
+        this.flashColor.set(0x3fa7ff); this.flash = 1;
+        this.sound.play('vent'); this.sound.play('eject', { volume: 0.4 });
+        this.hud.showCenter('Wormhole', 'Everyone has been scattered across the map.', 'crew', 3500);
+        return;
+      }
       this.hud.toast(`<b>${def.label} sabotaged!</b> ${def.description}`, 5000);
       if (def.critical) this.sound.startLoop('alarm', 'sabotageAlarm'); else this.sound.play('door');
       if (sab.type === 'comms') this.voice.setComms(true);
@@ -378,7 +387,7 @@ class App {
       this.sound.stopLoop('alarm');
       this.voice.setComms(false);
       this.sound.music.setIntensity(2);
-      if (m.fixed) { this.sound.play('taskComplete'); this.hud.toast(`${SABOTAGES[m.type].label} restored.`); }
+      if (m.fixed && !SABOTAGES[m.type].instant) { this.sound.play('taskComplete'); this.hud.toast(`${SABOTAGES[m.type].label} restored.`); }
       if (this.minigame?.kind === 'fix') this.closeMinigame();
       this._refreshTasks();
     });
@@ -488,9 +497,7 @@ class App {
         if (this.hud.sabotageMenuOpen) { this.hud.hideSabotageMenu(); this.localPlayer.requestPointerLock(this.canvas); }
         else {
           this.localPlayer.releasePointerLock();
-          const rooms = [];
-          for (const d of this.level.doors) if (!rooms.find((r) => r.id === d.room)) rooms.push({ id: d.room, name: this.level.rooms.get(d.room)?.name || d.room });
-          this.hud.showSabotageMenu(rooms, s, c.hostNow());
+          this.hud.showSabotageMenu(s, c.hostNow());
         }
         break;
       default:
@@ -502,7 +509,7 @@ class App {
     this.closeMinigame();
     clear(this.minigameRoot);
     const inner = el('div', {});
-    const card = el('div', { class: 'panel card', style: { position: 'relative' } }, el('button', { class: 'close small', onClick: () => this.closeMinigame() }, 'Close (Esc)'), el('h3', { style: { marginBottom: '8px' } }, def.label), inner);
+    const card = el('div', { class: 'panel card' }, el('div', { class: 'mg-head' }, el('h3', {}, def.label), el('span', { class: 'dim small' }, 'Esc to close'), el('button', { class: 'iconbtn', title: 'Close', onClick: () => this.closeMinigame() }, icon('close'))), inner);
     this.minigameRoot.appendChild(card);
     this.minigameRoot.hidden = false;
     this.localPlayer.releasePointerLock();
@@ -519,7 +526,7 @@ class App {
     if (station.visual && isCrew) this.client.minigameState(station.id, true);
     this._mountMinigame(def, {
       difficulty: difficultyFor(s.players.size),
-      params: { step: task.step },
+      params: { step: task.step, micRms: () => this.voice.localRms, micEnabled: () => this.voice.micEnabled },
       onComplete: () => {
         if (isCrew) this.client.taskComplete(task.id, station.id);
         else { this.sound.play('ping'); this.hud.toast('Task faked. The bar did not move.'); }
@@ -646,6 +653,26 @@ class App {
     this.hud.setLockHint(!!this.net && !document.pointerLockElement && !this._overlayOpen() && !this.hud.chatFocused && !this.playerList.visible);
   }
 
+  // Guidance arrows toward the panels that fix a critical sabotage. Hidden once you are in that room.
+  _sabotageArrows(myZone) {
+    const s = this.client.state, sab = s.sabotage;
+    if (!sab || s.phase !== 'ROUND' || (sab.type !== 'reactor' && sab.type !== 'o2')) return null;
+    const me = this.localPlayer.state, yaw = this.localPlayer.yaw;
+    const fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
+    const out = [];
+    for (const st of this.level.sabotageStations) {
+      if (st.type !== sab.type) continue;
+      const idx = st.index || 0;
+      if (sab.type === 'o2' && sab.fixed[idx]) continue;
+      if (sab.type === 'reactor' && sab.holds[idx]) continue;
+      const stZone = this.level.zoneAt(st.pos[0], st.pos[1] + 0.5, st.pos[2]);
+      if (stZone && myZone && stZone === myZone) continue;
+      const dx = st.pos[0] - me.x, dz = st.pos[2] - me.z;
+      out.push({ label: `${st.label}${stZone ? ' · ' + stZone.name : ''}`, angle: Math.atan2(dx * rx + dz * rz, dx * fx + dz * fz), dist: Math.hypot(dx, dz) });
+    }
+    return out;
+  }
+
   visionRadius() {
     const s = this.client.state;
     if (this.client.isGhost) return 1000;
@@ -721,6 +748,13 @@ class App {
     this.scanInteractions();
     this._refreshActions();
     if (s.sabotage) this.hud.setSabotage(s.sabotage, hostNow); else this.hud.setBanner(s.phase === 'ROLE_ASSIGN' ? 'Assigning roles…' : null);
+    this.hud.setArrows(this._sabotageArrows(zone));
+    this.hud.setSabotageCooldown({
+      visible: s.phase === 'ROUND',
+      ms: s.sabotageCooldownEnd - hostNow,
+      active: !!s.sabotage,
+      remaining: SABOTAGE_ORDER.length - (s.usedSabotages || []).length,
+    });
     if (this.meeting.visible) this.meeting.update(s, hostNow);
     if (this.lobbyPanel.root.hidden === false && (t | 0) % 30 === 0) this.lobbyPanel.update(s, this.net.isHost, (p) => this._speaking(p));
     if (this.playerList.visible && (t | 0) % 20 === 0) this._refreshPlayerList();
@@ -735,9 +769,9 @@ class App {
 
     // render
     this.flash = Math.max(0, this.flash - dt * 1.5);
-    this.vision.render(this.scene, this.camera, { radius, pulse: this.pulse, flash: this.flash * 0.6, flashColor: this.flashColor, time: t / 1000, skyDark: viewerIsGhost ? 0 : 0.55 });
+    this.vision.render(this.scene, this.camera, { radius, pulse: this.pulse, flash: this.flash * 0.6, flashColor: this.flashColor, fogColor: this.level.data.fogColor ?? 0x3a414a, time: t / 1000, skyDark: viewerIsGhost ? 0 : 0.55 });
     this.fpsAcc += dt; this.fpsN++;
-    if (this.fpsAcc >= 0.5) { this.hud.setFps(Math.round(this.fpsN / this.fpsAcc), this.vision.drawCalls || 0); this.fpsAcc = 0; this.fpsN = 0; }
+    if (this.fpsAcc >= 0.5) { this.hud.setStats({ fps: Math.round(this.fpsN / this.fpsAcc), draws: this.vision.drawCalls || 0, ping: this.net.isHost ? 0 : this.net.rtt(this.net.hostId) }); this.fpsAcc = 0; this.fpsN = 0; }
   }
 }
 

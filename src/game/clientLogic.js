@@ -25,6 +25,7 @@ export class ClientGame {
       meeting: null,
       sabotage: null,
       sabotageCooldownEnd: 0,
+      usedSabotages: [],
       doorsClosed: new Set(),
       killCooldownEnd: 0,
       emergencies: 0,
@@ -111,6 +112,8 @@ export class ClientGame {
         s.knownDead.clear();
         s.taskProgress = { done: 0, total: msg.tasksTotal || 0 };
         s.roundAt = msg.roundAt;
+        s.sabotageCooldownEnd = msg.sabotageCooldownEnd || 0;
+        s.usedSabotages = msg.used || [];
         for (const p of s.players.values()) p.alive = true;
         this.emit('gameStart', { levelId: msg.levelId, roundAt: msg.roundAt });
         this.emit('phase', { phase: 'ROLE_ASSIGN', levelId: s.levelId });
@@ -167,9 +170,9 @@ export class ClientGame {
         this.emit('taskAck', msg);
         break;
       }
-      case MSG.SABOTAGE_START: s.sabotage = msg.sabotage; this.emit('sabotageStart', msg.sabotage); break;
+      case MSG.SABOTAGE_START: s.sabotage = msg.sabotage; if (msg.used) s.usedSabotages = msg.used; this.emit('sabotageStart', msg.sabotage); break;
       case MSG.SABOTAGE_UPDATE: if (s.sabotage) { s.sabotage.holds = msg.holds; s.sabotage.fixed = msg.fixed; } this.emit('sabotageUpdate', msg); break;
-      case MSG.SABOTAGE_END: s.sabotage = null; s.sabotageCooldownEnd = msg.cooldownEnd || 0; this.emit('sabotageEnd', msg); break;
+      case MSG.SABOTAGE_END: s.sabotage = null; s.sabotageCooldownEnd = msg.cooldownEnd || 0; if (msg.used) s.usedSabotages = msg.used; this.emit('sabotageEnd', msg); break;
       case MSG.DOOR_STATE: s.doorsClosed = new Set(msg.closed || []); this.emit('doors', s.doorsClosed); break;
       case MSG.VENT_STATE: s.venting = !!msg.venting; s.ventId = msg.ventId || null; s.ventConnects = msg.connects || []; this.emit('ventState', msg); break;
       case MSG.FLARE: this.emit('flare'); break;

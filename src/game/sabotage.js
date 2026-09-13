@@ -5,12 +5,13 @@ export const SABOTAGES = {
   comms: { label: 'Comms', critical: false, description: 'Task lists hidden, voice scrambled. Fix at Comms.', fixStations: 1 },
   reactor: { label: 'Reactor', critical: true, description: 'Two players must hold both panels at once.', fixStations: 2 },
   o2: { label: 'O2', critical: true, description: 'Enter the codes at both filters.', fixStations: 2 },
-  doors: { label: 'Doors', critical: false, description: 'Seal a room for 10 seconds.', fixStations: 0 },
+  wormhole: { label: 'Wormhole', critical: false, description: 'Scatters everyone to random places on the map.', fixStations: 0, instant: true },
 };
+export const SABOTAGE_ORDER = ['lights', 'comms', 'reactor', 'o2', 'wormhole'];
 
-export function makeSabotage(type, now, opts = {}) {
+export function makeSabotage(type, now) {
   const def = SABOTAGES[type];
-  const s = { type, startedAt: now, endsAt: def.critical ? now + RULES.CRITICAL_SABOTAGE_TIME * 1000 : 0, holds: [false, false], fixed: [false, false], codes: null, room: opts.room || null };
+  const s = { type, startedAt: now, endsAt: def.critical ? now + RULES.CRITICAL_SABOTAGE_TIME * 1000 : 0, holds: [false, false], fixed: [false, false], codes: null };
   if (type === 'o2') s.codes = [randomCode(), randomCode()];
   return s;
 }
@@ -24,5 +25,5 @@ export function randomCode() {
 // Public view of a sabotage for clients (codes are shown on the HUD; that's the game)
 export function publicSabotage(s) {
   if (!s) return null;
-  return { type: s.type, startedAt: s.startedAt, endsAt: s.endsAt, holds: s.holds.slice(), fixed: s.fixed.slice(), codes: s.codes, room: s.room };
+  return { type: s.type, startedAt: s.startedAt, endsAt: s.endsAt, holds: s.holds.slice(), fixed: s.fixed.slice(), codes: s.codes };
 }

@@ -3,6 +3,7 @@ export default {
   id: 'lobby',
   name: 'Dropship',
   palette: { primary: 0x3b4652, accent: 0x7fb2ff, floor: 0x2c3138, wall: 0x3b4652, ceiling: 0x2a3038, emissive: 0x7fb2ff, surface: 'metal' },
+  fogColor: 0x353c46,
   background: 0x05070c,
   spawn: [0, 0, 2],
   spawnRadius: 3,

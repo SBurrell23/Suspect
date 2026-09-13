@@ -28,6 +28,7 @@ export const MSG = {
   ROSTER: 'ROSTER',
   HOST_CLAIM: 'HOST_CLAIM',
   PING: 'PING',
+  PONG: 'PONG',
   // client -> host
   JOIN: 'JOIN',
   SET_NAME: 'SET_NAME',

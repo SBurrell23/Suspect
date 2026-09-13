@@ -6,7 +6,7 @@ export default defineMinigame({ id: 'dataUpload', label: 'Data Upload', duration
   const { canvas, ctx, w, h, destroy: destroyCanvas } = setupCanvas(container, 640, 380);
   const p = pointer(canvas, w, h);
   const step = params.step || 0;
-  const need = step === 0 ? 6 : 5;
+  const need = step === 0 ? 9 : 7;
   let started = false, t = 0, done = false;
   const bits = [];
   for (let i = 0; i < 40; i++) bits.push({ x: Math.random(), y: Math.random(), s: Math.random() });
